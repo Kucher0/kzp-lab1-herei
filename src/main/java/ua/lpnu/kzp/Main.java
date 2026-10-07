@@ -126,7 +126,12 @@ public class Main {
 
             System.out.println(report);
 
-            Files.createDirectories(output.getParent());
+            Path outputParent = output.getParent();
+
+            if (outputParent != null) {
+                Files.createDirectories(outputParent);
+            }
+
             Files.writeString(output, report, StandardCharsets.UTF_8);
 
             System.out.println("Звіт записано у: " + output);
