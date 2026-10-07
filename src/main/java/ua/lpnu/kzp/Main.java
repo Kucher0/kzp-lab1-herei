@@ -11,6 +11,12 @@ import java.util.Locale;
 public class Main {
 
     public static void main(String[] args) {
+
+        if (args.length > 0 && args[0].equals("--version")) {
+            System.out.println("kzp-lab1-herei version 1.0.0");
+            return;
+        }
+
         Path input = Path.of("data", "input.csv");
         Path output = Path.of("out", "report.txt");
 
