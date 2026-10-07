@@ -8,8 +8,23 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
+/**
+ * Головний клас програми каталогу фільмів.
+ *
+ * <p>Програма читає дані з CSV-файлу, перевіряє їх коректність,
+ * обчислює статистичні показники та формує текстовий звіт.</p>
+ */
 public class Main {
 
+    /**
+     * Точка входу в програму.
+     *
+     * <p>Підтримуються параметри командного рядка:
+     * {@code --help}, {@code --version}, {@code --input} та
+     * {@code --output}.</p>
+     *
+     * @param args аргументи командного рядка
+     */
     public static void main(String[] args) {
 
         if (args.length > 0) {
