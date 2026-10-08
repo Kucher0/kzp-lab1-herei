@@ -283,3 +283,7 @@ java -jar target\kzp-lab1-herei-1.0.0.jar --input data\input.csv --output out\cu
 Окремо налаштовано GitHub Actions для автоматичної перевірки проєкту на Ubuntu, Windows та macOS.
 
 У результаті отримано відтворюваний Java-проєкт, який можна зібрати, протестувати та запустити незалежно від середовища розробки.
+
+## 10. Посилання 
+
+- Репозиторій GitHub: https://github.com/Kucher0/kzp-lab1-herei
