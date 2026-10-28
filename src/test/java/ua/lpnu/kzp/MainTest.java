@@ -52,7 +52,7 @@ class MainTest {
         String result = output.toString(StandardCharsets.UTF_8);
 
         assertTrue(
-                result.contains("version 1.0.0"),
+                result.contains("version 1.1.0"),
                 "Опція --version повинна повертати версію програми"
         );
     }
