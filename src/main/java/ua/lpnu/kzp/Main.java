@@ -28,7 +28,7 @@ public class Main {
 
         if (args.length > 0) {
             if (args[0].equals("--version")) {
-                System.out.println("kzp-lab1-herei version 1.1.0");
+                System.out.println("kzp-lab1-herei version 1.2.0");
                 return;
             }
 
@@ -37,18 +37,20 @@ public class Main {
                         Каталог фільмів — KZP Lab 1
 
                         Використання:
-                          java -jar kzp-lab1-herei-1.1.0.jar
-                          java -jar kzp-lab1-herei-1.1.0.jar --help
-                          java -jar kzp-lab1-herei-1.1.0.jar --version
-                          java -jar kzp-lab1-herei-1.1.0.jar --input <файл>
-                          java -jar kzp-lab1-herei-1.1.0.jar --output <файл>
-                          java -jar kzp-lab1-herei-1.1.0.jar --input <файл> --output <файл>
+                          java -jar kzp-lab1-herei-1.2.0.jar
+                          java -jar kzp-lab1-herei-1.2.0.jar --help
+                          java -jar kzp-lab1-herei-1.2.0.jar --version
+                          java -jar kzp-lab1-herei-1.2.0.jar --input <файл>
+                          java -jar kzp-lab1-herei-1.2.0.jar --output <файл>
+                          java -jar kzp-lab1-herei-1.2.0.jar --input <файл> --output <файл>
+                          java -jar kzp-lab1-herei-1.2.0.jar --scores
 
                         Параметри:
                           --help              показати цю довідку
                           --version           показати версію програми
                           --input <файл>      вказати вхідний CSV-файл
                           --output <файл>     вказати файл для збереження звіту
+                          --scores            додати рекомендаційні бали фільмів
                         """);
                 return;
             }
@@ -57,8 +59,12 @@ public class Main {
         Path input = Path.of("data", "input.csv");
         Path output = Path.of("out", "report.txt");
 
+        boolean showScores = false;
+
         for (int i = 0; i < args.length; i++) {
-            if (args[i].equals("--input")) {
+            if (args[i].equals("--scores")) {
+                showScores = true;
+            } else if (args[i].equals("--input")) {
                 if (i + 1 >= args.length) {
                     System.err.println(
                             "Помилка: після --input потрібно вказати файл."
@@ -92,6 +98,10 @@ public class Main {
                     CatalogService.summarize(movies),
                     errors
             );
+
+            if (showScores) {
+                report = report + CatalogService.buildScoreSection(movies);
+            }
 
             System.out.println(report);
 
