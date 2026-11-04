@@ -2,9 +2,12 @@ package ua.lpnu.kzp;
 
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.IntSummaryStatistics;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Розбирає записи, обчислює показники та формує текст звіту.
@@ -43,23 +46,13 @@ public final class CatalogService {
     /**
      * Обчислює кількість, середній рейтинг, найдовший фільм і найстаріший рік.
      *
+     * <p>Із ЛР № 4 обчислення виконує потоковий запит {@link MovieQueries#summary(List)}.</p>
+     *
      * @param movies коректні фільми
      * @return підсумок; для порожнього списку всі показники нульові
      */
     public static YearRating summarize(List<Movie> movies) {
-        if (movies.isEmpty()) {
-            return new YearRating(0, 0.0, 0, 0);
-        }
-        double ratingSum = 0.0;
-        int longest = 0;
-        int oldest = Integer.MAX_VALUE;
-        for (Movie movie : movies) {
-            ratingSum += movie.getRating();
-            longest = Math.max(longest, movie.getMinutes());
-            oldest = Math.min(oldest, movie.getYear());
-        }
-        // Явне приведення не допускає цілочислового ділення.
-        return new YearRating(movies.size(), ratingSum / movies.size(), longest, oldest);
+        return MovieQueries.summary(movies);
     }
 
     /**
@@ -107,5 +100,64 @@ public final class CatalogService {
         section.append(String.format(Locale.ROOT, "Унікальних фільмів: %d%nНайвищий бал: %.2f%n",
                 unique.size(), best));
         return section.toString();
+    }
+
+    /**
+     * Формує розділ із результатами потокових запитів (лише за ключем --queries).
+     *
+     * <p>Тут лише форматування: самі запити виконує {@link MovieQueries}.</p>
+     *
+     * @param movies коректні фільми
+     * @return текст розділу
+     */
+    public static String buildQueriesSection(List<Movie> movies) {
+        StringBuilder section = new StringBuilder(String.format("%nЗапити Stream API:%n"));
+
+        List<Movie> highlyRated = MovieQueries.highlyRated(movies);
+        section.append(String.format(Locale.ROOT, "Оцінка не нижче %.1f: %d%n",
+                MovieQueries.HIGH_RATING_THRESHOLD, highlyRated.size()));
+        section.append("Назви: ").append(MovieQueries.titles(highlyRated).stream()
+                .collect(Collectors.joining(", "))).append(System.lineSeparator());
+
+        section.append(String.format("Середня оцінка за режисером:%n"));
+        Map<String, Double> byDirector = MovieQueries.averageRatingByDirector(movies);
+        if (byDirector.isEmpty()) {
+            section.append(String.format("  немає даних%n"));
+        }
+        byDirector.forEach((director, average) -> section.append(
+                String.format(Locale.ROOT, "  %s: %.2f%n", director, average)));
+
+        IntSummaryStatistics duration = MovieQueries.durationStatistics(movies);
+        if (duration.getCount() == 0) {
+            section.append(String.format("Тривалість: немає даних%n"));
+        } else {
+            section.append(String.format(Locale.ROOT,
+                    "Тривалість: кількість=%d, мінімум=%d хв, максимум=%d хв, середня=%.2f хв%n",
+                    duration.getCount(), duration.getMin(), duration.getMax(),
+                    duration.getAverage()));
+        }
+
+        section.append(String.format("Топ-%d за оцінкою:%n", MovieQueries.TOP_N));
+        List<Movie> top = MovieQueries.topByRating(movies, MovieQueries.TOP_N);
+        for (int index = 0; index < top.size(); index++) {
+            Movie movie = top.get(index);
+            section.append(String.format(Locale.ROOT, "  %d. %s (%.2f)%n",
+                    index + 1, movie.getTitle(), movie.getRating()));
+        }
+        return section.toString();
+    }
+
+    /**
+     * Формує рядок результату пошуку за назвою (ключ --find).
+     *
+     * @param movies коректні фільми
+     * @param title шукана назва
+     * @return рядок із фільмом або повідомленням про відсутність
+     */
+    public static String buildSearchLine(List<Movie> movies, String title) {
+        String result = MovieQueries.findByTitle(movies, title)
+                .map(Movie::toString)
+                .orElse("не знайдено");
+        return String.format("Пошук «%s»: %s%n", title, result);
     }
 }
