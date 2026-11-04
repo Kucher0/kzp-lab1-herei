@@ -52,8 +52,33 @@ class MainTest {
         String result = output.toString(StandardCharsets.UTF_8);
 
         assertTrue(
-                result.contains("version 1.1.0"),
+                result.contains("version 1.2.0"),
                 "Опція --version повинна повертати версію програми"
         );
+    }
+
+    @Test
+    void scoresOptionAddsPolymorphicSection() throws Exception {
+        PrintStream originalOut = System.out;
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+
+        System.setOut(new PrintStream(output, true, StandardCharsets.UTF_8));
+
+        try {
+            Main.main(new String[]{
+                "--input", "data/input_lab03.csv",
+                "--output", "target/lab03-report.txt",
+                "--scores"
+            });
+        } finally {
+            System.setOut(originalOut);
+        }
+
+        String result = output.toString(StandardCharsets.UTF_8);
+
+        assertTrue(result.contains("Рекомендаційні бали:"));
+        assertTrue(result.contains("Наша планета (документальний): 94.40"));
+        assertTrue(Files.readString(Path.of("target", "lab03-report.txt"),
+                StandardCharsets.UTF_8).contains("Унікальних фільмів: 4"));
     }
 }

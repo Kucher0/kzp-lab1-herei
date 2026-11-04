@@ -1,8 +1,10 @@
 package ua.lpnu.kzp;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 
 /**
  * Розбирає записи, обчислює показники та формує текст звіту.
@@ -81,5 +83,29 @@ public final class CatalogService {
             report.append(error).append(System.lineSeparator());
         }
         return report.toString();
+    }
+
+    /**
+     * Формує додатковий розділ із рекомендаційними балами (лише за ключем --scores).
+     *
+     * <p>Бал кожного фільму обчислює його підтип; цикл не перевіряє тип об'єкта.</p>
+     *
+     * @param movies коректні фільми різних підтипів
+     * @return текст розділу
+     */
+    public static String buildScoreSection(List<Movie> movies) {
+        StringBuilder section = new StringBuilder(String.format("%nРекомендаційні бали:%n"));
+        double best = 0.0;
+        for (Movie movie : movies) {
+            double score = movie.recommendationScore();
+            best = Math.max(best, score);
+            section.append(String.format(Locale.ROOT, "%s (%s): %.2f%n",
+                    movie.getTitle(), movie.getKind().label(), score));
+        }
+        // Рівні за equals/hashCode фільми в множині не дублюються.
+        Set<Movie> unique = new HashSet<>(movies);
+        section.append(String.format(Locale.ROOT, "Унікальних фільмів: %d%nНайвищий бал: %.2f%n",
+                unique.size(), best));
+        return section.toString();
     }
 }

@@ -73,9 +73,9 @@ class CatalogServiceTest {
     @Test
     void summarizeComputesAllMetrics() {
         List<Movie> movies = List.of(
-                new Movie("A", "X", 1965, 97, 8.0),
-                new Movie("B", "Y", 1994, 142, 9.0),
-                new Movie("C", "Z", 2020, 100, 6.0));
+                new FeatureFilm("A", "X", 1965, 97, 8.0),
+                new FeatureFilm("B", "Y", 1994, 142, 9.0),
+                new FeatureFilm("C", "Z", 2020, 100, 6.0));
         YearRating summary = CatalogService.summarize(movies);
         assertEquals(3, summary.count());
         assertEquals(7.6667, summary.averageRating(), 0.0001);
@@ -97,5 +97,33 @@ class CatalogServiceTest {
         assertTrue(report.contains("Кількість коректних записів: 0"));
         assertTrue(report.contains("Середній рейтинг: 0.00"));
         assertTrue(report.contains("Рядок 1: неправильна кількість полів"));
+    }
+
+    /* Розділ балів: поліморфний виклик і унікальність через HashSet. */
+    @Test
+    void scoreSectionUsesPolymorphismAndCountsUnique() {
+        List<Movie> movies = List.of(
+                new FeatureFilm("A", "X", 2000, 90, 8.0),
+                new Documentary("B", "Y", 2001, 80, 8.0),
+                new FeatureFilm("A", "X", 2000, 90, 8.0));
+        String section = CatalogService.buildScoreSection(movies);
+        assertTrue(section.contains("A (художній): 80.00"));
+        assertTrue(section.contains("B (документальний): 84.00"));
+        assertTrue(section.contains("Унікальних фільмів: 2"));
+        assertTrue(section.contains("Найвищий бал: 84.00"));
+    }
+
+    /* Файл ЛР № 3 з різними підтипами: правильні кількості й помилки. */
+    @Test
+    void parseCreatesDifferentSubtypesAndKeepsErrors() {
+        List<String> errors = new ArrayList<>();
+        List<Movie> movies = CatalogService.parse(List.of(
+                "Інтерстеллар;Крістофер Нолан;2014;169;8.7;художній",
+                "Наша планета;Алістер Фотергілл;2019;50;9.3;документальний",
+                "Мюзикл;Хтось;2000;100;7.0;мюзикл"), errors);
+        assertEquals(2, movies.size());
+        assertTrue(movies.get(0) instanceof FeatureFilm);
+        assertTrue(movies.get(1) instanceof Documentary);
+        assertEquals(List.of("Рядок 3: невідомий вид фільму"), errors);
     }
 }
