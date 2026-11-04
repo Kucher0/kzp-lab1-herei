@@ -126,4 +126,38 @@ class CatalogServiceTest {
         assertTrue(movies.get(1) instanceof Documentary);
         assertEquals(List.of("Рядок 3: невідомий вид фільму"), errors);
     }
+
+    /* Розділ потокових запитів: форматування результатів MovieQueries. */
+    @Test
+    void queriesSectionFormatsAllQueries() {
+        List<Movie> movies = List.of(
+                new FeatureFilm("Атлантида", "Валентин Васянович", 2019, 108, 8.0),
+                new Documentary("Наша планета", "Алістер Фотергілл", 2019, 50, 9.3));
+        String section = CatalogService.buildQueriesSection(movies);
+        assertTrue(section.contains("Запити Stream API:"));
+        assertTrue(section.contains("Оцінка не нижче 8.0: 2"));
+        assertTrue(section.contains("Назви: Атлантида, Наша планета"));
+        assertTrue(section.contains("Алістер Фотергілл: 9.30"));
+        assertTrue(section.contains("кількість=2, мінімум=50 хв, максимум=108 хв, середня=79.00 хв"));
+        assertTrue(section.contains("1. Наша планета (9.30)"));
+        assertTrue(section.contains("2. Атлантида (8.00)"));
+    }
+
+    /* Порожній набір: явне повідомлення замість значень ±нескінченність. */
+    @Test
+    void queriesSectionHandlesEmptyInput() {
+        String section = CatalogService.buildQueriesSection(List.of());
+        assertTrue(section.contains("немає даних"));
+        assertTrue(section.contains("Тривалість: немає даних"));
+        assertTrue(section.contains("Оцінка не нижче 8.0: 0"));
+    }
+
+    @Test
+    void searchLineReportsFoundAndMissing() {
+        List<Movie> movies = List.of(new FeatureFilm("Довбуш", "Олесь Санін", 2023, 112, 8.0));
+        assertTrue(CatalogService.buildSearchLine(movies, "Довбуш")
+                .contains("Пошук «Довбуш»: Довбуш (Олесь Санін, 2023)"));
+        assertTrue(CatalogService.buildSearchLine(movies, "Немає")
+                .contains("Пошук «Немає»: не знайдено"));
+    }
 }
