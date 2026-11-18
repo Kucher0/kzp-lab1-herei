@@ -45,6 +45,20 @@ jobs:
           java -jar target/kzp-lab1-herei-1.4.0.jar --input data/input_lab05.csv --output target/ci-report.txt --csv target/ci-movies.csv
           grep -q "Round-trip: успішно" target/ci-report.txt
 
+      - name: Check CSV encoding and line separators
+        shell: bash
+        run: |
+          echo "Runner OS: ${{ runner.os }}"
+          echo "First bytes (hex): $(od -An -tx1 -N4 target/ci-movies.csv)"
+          bom=$(od -An -tx1 -N3 target/ci-movies.csv | tr -d ' \n')
+          if [ "$bom" = "efbbbf" ]; then echo "UTF-8 BOM found"; exit 1; fi
+          cr_count=$(tr -cd '\r' < target/ci-movies.csv | wc -c | tr -d ' ')
+          lf_count=$(tr -cd '\n' < target/ci-movies.csv | wc -c | tr -d ' ')
+          echo "CR count: $cr_count, LF count: $lf_count"
+          if [ "${{ runner.os }}" = "Windows" ]; then expected_cr="$lf_count"; else expected_cr=0; fi
+          if [ "$cr_count" -ne "$expected_cr" ]; then echo "Unexpected CR count"; exit 1; fi
+          if [ "$lf_count" -ne 7 ]; then echo "Expected 7 CSV rows (header + 6 records)"; exit 1; fi
+
       - name: Upload JAR
         if: success()
         uses: actions/upload-artifact@v4

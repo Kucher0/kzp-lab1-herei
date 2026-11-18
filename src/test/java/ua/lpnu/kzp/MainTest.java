@@ -143,6 +143,36 @@ class MainTest {
     }
 
     @Test
+    void emptyInputGivesHeaderOnlyCsvAndSuccessfulRoundTrip() throws Exception {
+        PrintStream originalOut = System.out;
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        Path csv = Path.of("target", "lab05-empty-movies.csv");
+
+        System.setOut(new PrintStream(output, true, StandardCharsets.UTF_8));
+
+        try {
+            Main.main(new String[]{
+                "--input", "data/empty_lab05.csv",
+                "--output", "target/lab05-empty-report.txt",
+                "--csv", "target/lab05-empty-movies.csv"
+            });
+        } finally {
+            System.setOut(originalOut);
+        }
+
+        String result = output.toString(StandardCharsets.UTF_8);
+        List<List<String>> rows =
+                CsvParser.parseDocument(Files.readString(csv, StandardCharsets.UTF_8));
+
+        assertTrue(result.contains("Кількість записів: 0"));
+        assertTrue(result.contains("Відновлено записів: 0"));
+        assertTrue(result.contains("Round-trip: успішно"));
+        assertEquals(
+                List.of(List.of("Режисер", "Тривалість", "Оцінка", "Назва", "Рік")),
+                rows);
+    }
+
+    @Test
     void missingInputFileIsReportedWithoutException() {
         PrintStream originalErr = System.err;
         ByteArrayOutputStream error = new ByteArrayOutputStream();

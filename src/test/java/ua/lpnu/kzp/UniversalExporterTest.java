@@ -39,6 +39,8 @@ class UniversalExporterTest {
         @CsvColumn("Населення")
         private final long population;
 
+        // Поле без @CsvColumn: експортер має його проігнорувати.
+        @SuppressWarnings("unused")
         private final String ignored = "не експортується";
 
         City(int id, String name, long population) {
@@ -49,6 +51,8 @@ class UniversalExporterTest {
     }
 
     static final class Plain {
+        // Клас без жодного поля з @CsvColumn.
+        @SuppressWarnings("unused")
         private final String value = "x";
     }
 

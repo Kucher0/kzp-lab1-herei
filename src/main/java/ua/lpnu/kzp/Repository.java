@@ -1,4 +1,3 @@
-
 package ua.lpnu.kzp;
 
 import java.util.ArrayList;

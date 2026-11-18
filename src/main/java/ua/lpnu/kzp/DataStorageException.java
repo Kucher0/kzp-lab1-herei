@@ -1,10 +1,15 @@
-
 package ua.lpnu.kzp;
 
 /**
  * Повідомляє про помилки зберігання, читання або обробки даних.
+ *
+ * <p>Це checked-виняток предметної області: повідомлення пояснює операцію,
+ * а {@link #getCause()} зберігає першопричину (наприклад, {@code IOException},
+ * {@code NumberFormatException} або помилку рефлексії).</p>
  */
 public class DataStorageException extends Exception {
+
+    private static final long serialVersionUID = 1L;
 
     /**
      * Створює виняток із повідомленням.
