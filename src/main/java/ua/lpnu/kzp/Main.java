@@ -1,4 +1,3 @@
-
 package ua.lpnu.kzp;
 
 import java.io.IOException;
@@ -25,7 +24,7 @@ public class Main {
 
         if (args.length > 0) {
             if (args[0].equals("--version")) {
-                System.out.println("kzp-lab1-herei version 1.3.0");
+                System.out.println("kzp-lab1-herei version 1.4.0");
                 return;
             }
 
@@ -34,15 +33,15 @@ public class Main {
                         Каталог фільмів — KZP Lab 1
 
                         Використання:
-                          java -jar kzp-lab1-herei-1.3.0.jar
-                          java -jar kzp-lab1-herei-1.3.0.jar --help
-                          java -jar kzp-lab1-herei-1.3.0.jar --version
-                          java -jar kzp-lab1-herei-1.3.0.jar --input <файл>
-                          java -jar kzp-lab1-herei-1.3.0.jar --output <файл>
-                          java -jar kzp-lab1-herei-1.3.0.jar --csv <файл>
-                          java -jar kzp-lab1-herei-1.3.0.jar --scores
-                          java -jar kzp-lab1-herei-1.3.0.jar --queries
-                          java -jar kzp-lab1-herei-1.3.0.jar --find <назва>
+                          java -jar kzp-lab1-herei-1.4.0.jar
+                          java -jar kzp-lab1-herei-1.4.0.jar --help
+                          java -jar kzp-lab1-herei-1.4.0.jar --version
+                          java -jar kzp-lab1-herei-1.4.0.jar --input <файл>
+                          java -jar kzp-lab1-herei-1.4.0.jar --output <файл>
+                          java -jar kzp-lab1-herei-1.4.0.jar --csv <файл>
+                          java -jar kzp-lab1-herei-1.4.0.jar --scores
+                          java -jar kzp-lab1-herei-1.4.0.jar --queries
+                          java -jar kzp-lab1-herei-1.4.0.jar --find <назва>
 
                         Параметри:
                           --help              показати довідку
@@ -184,19 +183,19 @@ public class Main {
             boolean roundTripSuccessful =
                     originalRecords.equals(restoredRecords);
 
-            report += "\nРезультати CSV-зберігання:\n";
-            report += "Кількість записів: "
-                    + originalRecords.size() + "\n";
-            report += "Відновлено записів: "
-                    + restoredRecords.size() + "\n";
-            report += "Round-trip: "
-                    + (roundTripSuccessful ? "успішно" : "помилка")
-                    + "\n";
-            report += "CSV-файл: " + csvOutput + "\n";
+            String newLine = System.lineSeparator();
+
+            report += newLine + "Результати CSV-зберігання:" + newLine
+                    + "Кількість записів: " + originalRecords.size() + newLine
+                    + "CSV-рядків разом із заголовком: " + rows.size() + newLine
+                    + "Відновлено записів: " + restoredRecords.size() + newLine
+                    + "Round-trip: "
+                    + (roundTripSuccessful ? "успішно" : "помилка") + newLine
+                    + "CSV-файл: " + csvOutput + newLine;
 
             System.out.println(report);
 
-            Path outputParent = output.getParent();
+            Path outputParent = output.toAbsolutePath().getParent();
 
             if (outputParent != null) {
                 Files.createDirectories(outputParent);
@@ -218,10 +217,15 @@ public class Main {
             }
 
         } catch (IOException | DataStorageException exception) {
-            System.err.println(
-                    "Помилка роботи зі сховищем або файлами: "
-                            + exception.getMessage()
-            );
+            System.err.println("Помилка роботи зі сховищем або файлами: "
+                    + exception.getClass().getSimpleName()
+                    + ": " + exception.getMessage());
+
+            Throwable cause = exception.getCause();
+
+            if (cause != null) {
+                System.err.println("Причина: " + cause);
+            }
         }
     }
 }

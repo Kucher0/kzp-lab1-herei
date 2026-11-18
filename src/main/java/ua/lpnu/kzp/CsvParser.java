@@ -1,4 +1,3 @@
-
 package ua.lpnu.kzp;
 
 import java.util.ArrayList;
@@ -11,6 +10,22 @@ public final class CsvParser {
 
     private CsvParser() {
         // Utility class.
+    }
+
+    /**
+     * Розбирає один логічний CSV-рядок.
+     *
+     * @param line текст рівно одного запису
+     * @return поля запису
+     * @throws DataStorageException якщо формат хибний або записів не один
+     */
+    public static List<String> parse(String line) throws DataStorageException {
+        List<List<String>> records = parseDocument(line);
+        if (records.size() != 1) {
+            throw new DataStorageException(
+                    "Очікується один CSV-рядок, отримано: " + records.size());
+        }
+        return records.get(0);
     }
 
     /**

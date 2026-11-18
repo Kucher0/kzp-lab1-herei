@@ -1,4 +1,3 @@
-
 package ua.lpnu.kzp;
 
 import java.util.List;
@@ -49,7 +48,8 @@ public final class MovieRecord {
             throw new IllegalArgumentException("Тривалість має бути додатною");
         }
         if (!Double.isFinite(rating) || rating < 0.0 || rating > 10.0) {
-            throw new IllegalArgumentException("Оцінка має бути в діапазоні від 0 до 10");
+            throw new IllegalArgumentException(
+                    "Оцінка має бути в діапазоні від 0 до 10");
         }
 
         this.year = year;
@@ -57,12 +57,25 @@ public final class MovieRecord {
         this.rating = rating;
     }
 
+    /* Перевіряє, що текстове поле не null і не порожнє. */
     private static String validateText(String value, String fieldName) {
         Objects.requireNonNull(value, fieldName + " не може бути null");
         if (value.isBlank()) {
             throw new IllegalArgumentException(fieldName + " не може бути порожньою");
         }
         return value;
+    }
+
+    /**
+     * Відновлює запис фільму з одного CSV-рядка (поля в порядку експорту).
+     *
+     * @param line текст одного CSV-запису
+     * @return відновлений запис
+     * @throws DataStorageException якщо формат, кількість полів або значення хибні
+     */
+    public static MovieRecord fromCsvLine(String line)
+            throws DataStorageException {
+        return fromCsv(CsvParser.parse(line));
     }
 
     /**
@@ -75,35 +88,36 @@ public final class MovieRecord {
      * @return відновлений запис фільму
      * @throws DataStorageException якщо кількість або значення полів некоректні
      */
-   public static MovieRecord fromCsv(List<String> fields)
-        throws DataStorageException {
-    if (fields == null || fields.size() != 5) {
-        throw new DataStorageException(
-                "Некоректний CSV-запис: очікується рівно 5 полів");
+    public static MovieRecord fromCsv(List<String> fields)
+            throws DataStorageException {
+        if (fields == null || fields.size() != 5) {
+            throw new DataStorageException(
+                    "Некоректний CSV-запис: очікується рівно 5 полів");
+        }
+
+        if (fields.stream().anyMatch(Objects::isNull)) {
+            throw new DataStorageException(
+                    "Некоректний CSV-запис: поля не можуть бути null");
+        }
+
+        try {
+            String director = fields.get(0);
+            int durationMinutes = Integer.parseInt(fields.get(1));
+            double rating = Double.parseDouble(fields.get(2));
+            String title = fields.get(3);
+            int year = Integer.parseInt(fields.get(4));
+
+            return new MovieRecord(
+                    title, director, year, durationMinutes, rating);
+        } catch (NumberFormatException exception) {
+            throw new DataStorageException(
+                    "Некоректне числове значення у CSV-записі", exception);
+        } catch (IllegalArgumentException exception) {
+            throw new DataStorageException(
+                    "Некоректні дані фільму у CSV-записі", exception);
+        }
     }
 
-    if (fields.stream().anyMatch(Objects::isNull)) {
-        throw new DataStorageException(
-                "Некоректний CSV-запис: поля не можуть бути null");
-    }
-
-    try {
-        String director = fields.get(0);
-        int durationMinutes = Integer.parseInt(fields.get(1));
-        double rating = Double.parseDouble(fields.get(2));
-        String title = fields.get(3);
-        int year = Integer.parseInt(fields.get(4));
-
-        return new MovieRecord(
-                title, director, year, durationMinutes, rating);
-    } catch (NumberFormatException exception) {
-        throw new DataStorageException(
-                "Некоректне числове значення у CSV-записі", exception);
-    } catch (IllegalArgumentException exception) {
-        throw new DataStorageException(
-                "Некоректні дані фільму у CSV-записі", exception);
-    }
-}
     /** Повертає назву фільму. */
     public String getTitle() {
         return title;
@@ -151,7 +165,7 @@ public final class MovieRecord {
     }
 
     /**
-     * Повертає хеш-код запису.
+     * Повертає хеш-код, узгоджений з {@code equals}.
      *
      * @return хеш-код
      */

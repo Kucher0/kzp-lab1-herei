@@ -1,4 +1,3 @@
-
 package ua.lpnu.kzp;
 
 import java.io.IOException;
@@ -9,13 +8,15 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 
 /**
- * Універсальний рефлексивний експортер об'єктів у формат CSV.
+ * Універсальний рефлексивний експортер об'єктів у формат CSV (UTF-8).
+ *
+ * <p>Експортер не знає жодного предметного класу: стовпці визначаються
+ * лише полями з {@link CsvColumn}, а їхній порядок — сортуванням Java-імен.</p>
  */
 public final class CsvExporter {
 
@@ -44,20 +45,12 @@ public final class CsvExporter {
 
         List<Field> fields = annotatedFields(type);
 
-        if (fields.isEmpty()) {
-            throw new DataStorageException(
-                    "Клас " + type.getSimpleName()
-                            + " не містить полів з @CsvColumn");
+        List<String> headers = new ArrayList<>();
+        for (Field field : fields) {
+            headers.add(escape(field.getAnnotation(CsvColumn.class).value()));
         }
 
-        StringBuilder csv = new StringBuilder();
-
-        List<String> headers = fields.stream()
-                .map(field -> escape(
-                        field.getAnnotation(CsvColumn.class).value()))
-                .toList();
-
-        csv.append(String.join(",", headers))
+        StringBuilder csv = new StringBuilder(String.join(",", headers))
                 .append(System.lineSeparator());
 
         for (T record : records) {
@@ -75,16 +68,8 @@ public final class CsvExporter {
 
             for (Field field : fields) {
                 try {
-                    if (!field.trySetAccessible()) {
-                        throw new IllegalAccessException(
-                                "Неможливо отримати доступ до поля "
-                                        + field.getName());
-                    }
-
-                    Object value = field.get(record);
-                    values.add(escape(value == null ? "" : String.valueOf(value)));
-
-                } catch (IllegalAccessException | SecurityException exception) {
+                    values.add(escape(field.get(record)));
+                } catch (IllegalAccessException exception) {
                     throw new DataStorageException(
                             "Не вдалося прочитати поле " + field.getName(),
                             exception);
@@ -95,8 +80,14 @@ public final class CsvExporter {
                     .append(System.lineSeparator());
         }
 
+        writeFile(path, csv.toString());
+    }
+
+    /* Записує текст через Path і Files з явним UTF-8. */
+    private static void writeFile(Path path, String text)
+            throws DataStorageException {
         try {
-            Path parent = path.getParent();
+            Path parent = path.toAbsolutePath().getParent();
 
             if (parent != null) {
                 Files.createDirectories(parent);
@@ -104,7 +95,7 @@ public final class CsvExporter {
 
             Files.writeString(
                     path,
-                    csv.toString(),
+                    text,
                     StandardCharsets.UTF_8,
                     StandardOpenOption.CREATE,
                     StandardOpenOption.TRUNCATE_EXISTING,
@@ -119,32 +110,47 @@ public final class CsvExporter {
     }
 
     /**
-     * Отримує анотовані поля класу та його батьківських класів.
+     * Отримує анотовані поля класу та його батьківських класів і перевіряє доступ.
      *
      * @param type клас для аналізу
-     * @return поля у детермінованому порядку
+     * @return поля у детермінованому порядку (за Java-іменем)
+     * @throws DataStorageException якщо полів немає або доступ заборонено
      */
-    private static List<Field> annotatedFields(Class<?> type) {
+    private static List<Field> annotatedFields(Class<?> type)
+            throws DataStorageException {
         List<Field> fields = new ArrayList<>();
 
-        Class<?> current = type;
-
-        while (current != null && current != Object.class) {
-            Arrays.stream(current.getDeclaredFields())
-                    .filter(field ->
-                            field.isAnnotationPresent(CsvColumn.class))
-                    .filter(field ->
-                            !Modifier.isStatic(field.getModifiers()))
-                    .forEach(fields::add);
-
-            current = current.getSuperclass();
+        for (Class<?> current = type;
+                current != null && current != Object.class;
+                current = current.getSuperclass()) {
+            for (Field field : current.getDeclaredFields()) {
+                if (field.isAnnotationPresent(CsvColumn.class)
+                        && !Modifier.isStatic(field.getModifiers())) {
+                    fields.add(field);
+                }
+            }
         }
 
-        fields.sort(
-                Comparator.comparing(Field::getName)
-                        .thenComparing(field ->
-                                field.getDeclaringClass().getName())
-        );
+        if (fields.isEmpty()) {
+            throw new DataStorageException(
+                    "Клас " + type.getSimpleName()
+                            + " не містить полів з @CsvColumn");
+        }
+
+        fields.sort(Comparator.comparing(Field::getName)
+                .thenComparing(field -> field.getDeclaringClass().getName()));
+
+        for (Field field : fields) {
+            try {
+                if (!field.trySetAccessible()) {
+                    throw new DataStorageException(
+                            "Немає доступу до поля " + field.getName());
+                }
+            } catch (SecurityException exception) {
+                throw new DataStorageException(
+                        "Немає доступу до поля " + field.getName(), exception);
+            }
+        }
 
         return List.copyOf(fields);
     }
@@ -152,18 +158,19 @@ public final class CsvExporter {
     /**
      * Екранує значення відповідно до правил CSV.
      *
-     * @param value початкове значення
-     * @return екрановане значення
+     * @param value значення поля (null дає порожнє поле)
+     * @return екрановане текстове подання
      */
-    private static String escape(String value) {
-        if (value.contains(",")
-                || value.contains("\"")
-                || value.contains("\n")
-                || value.contains("\r")) {
+    private static String escape(Object value) {
+        String text = value == null ? "" : String.valueOf(value);
 
-            return "\"" + value.replace("\"", "\"\"") + "\"";
+        if (text.contains(",")
+                || text.contains("\"")
+                || text.contains("\n")
+                || text.contains("\r")) {
+            return "\"" + text.replace("\"", "\"\"") + "\"";
         }
 
-        return value;
+        return text;
     }
 }
