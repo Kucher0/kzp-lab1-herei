@@ -10,17 +10,13 @@ import java.util.List;
 /**
  * Головний клас програми каталогу фільмів.
  *
- * <p>Програма читає дані з CSV-файлу, перевіряє їх коректність,
- * обчислює статистичні показники та формує текстовий звіт.</p>
+ * <p>Програма читає дані, зберігає фільми у Repository,
+ * експортує записи у CSV та перевіряє відновлення даних.</p>
  */
 public class Main {
 
     /**
      * Точка входу в програму.
-     *
-     * <p>Підтримуються параметри командного рядка:
-     * {@code --help}, {@code --version}, {@code --input} та
-     * {@code --output}.</p>
      *
      * @param args аргументи командного рядка
      */
@@ -28,7 +24,7 @@ public class Main {
 
         if (args.length > 0) {
             if (args[0].equals("--version")) {
-                System.out.println("kzp-lab1-herei version 1.3.0");
+                System.out.println("kzp-lab1-herei version 1.4.0");
                 return;
             }
 
@@ -37,23 +33,24 @@ public class Main {
                         Каталог фільмів — KZP Lab 1
 
                         Використання:
-                          java -jar kzp-lab1-herei-1.3.0.jar
-                          java -jar kzp-lab1-herei-1.3.0.jar --help
-                          java -jar kzp-lab1-herei-1.3.0.jar --version
-                          java -jar kzp-lab1-herei-1.3.0.jar --input <файл>
-                          java -jar kzp-lab1-herei-1.3.0.jar --output <файл>
-                          java -jar kzp-lab1-herei-1.3.0.jar --input <файл> --output <файл>
-                          java -jar kzp-lab1-herei-1.3.0.jar --scores
-                          java -jar kzp-lab1-herei-1.3.0.jar --queries
-                          java -jar kzp-lab1-herei-1.3.0.jar --find <назва>
+                          java -jar kzp-lab1-herei-1.4.0.jar
+                          java -jar kzp-lab1-herei-1.4.0.jar --help
+                          java -jar kzp-lab1-herei-1.4.0.jar --version
+                          java -jar kzp-lab1-herei-1.4.0.jar --input <файл>
+                          java -jar kzp-lab1-herei-1.4.0.jar --output <файл>
+                          java -jar kzp-lab1-herei-1.4.0.jar --csv <файл>
+                          java -jar kzp-lab1-herei-1.4.0.jar --scores
+                          java -jar kzp-lab1-herei-1.4.0.jar --queries
+                          java -jar kzp-lab1-herei-1.4.0.jar --find <назва>
 
                         Параметри:
-                          --help              показати цю довідку
-                          --version           показати версію програми
-                          --input <файл>      вказати вхідний CSV-файл
-                          --output <файл>     вказати файл для збереження звіту
-                          --scores            додати рекомендаційні бали фільмів
-                          --queries           додати результати потокових запитів
+                          --help              показати довідку
+                          --version           показати версію
+                          --input <файл>      вхідний файл
+                          --output <файл>     файл текстового звіту
+                          --csv <файл>        файл CSV-експорту
+                          --scores            додати рекомендаційні бали
+                          --queries           додати потокові запити
                           --find <назва>      знайти фільм за назвою
                         """);
                 return;
@@ -62,6 +59,7 @@ public class Main {
 
         Path input = Path.of("data", "input.csv");
         Path output = Path.of("out", "report.txt");
+        Path csvOutput = Path.of("out", "movies.csv");
 
         boolean showScores = false;
         boolean showQueries = false;
@@ -70,36 +68,41 @@ public class Main {
         for (int i = 0; i < args.length; i++) {
             if (args[i].equals("--scores")) {
                 showScores = true;
+
             } else if (args[i].equals("--queries")) {
                 showQueries = true;
+
             } else if (args[i].equals("--find")) {
                 if (i + 1 >= args.length) {
                     System.err.println(
-                            "Помилка: після --find потрібно вказати назву."
-                    );
+                            "Помилка: після --find потрібно вказати назву.");
                     return;
                 }
-
                 findTitle = args[++i];
+
             } else if (args[i].equals("--input")) {
                 if (i + 1 >= args.length) {
                     System.err.println(
-                            "Помилка: після --input потрібно вказати файл."
-                    );
+                            "Помилка: після --input потрібно вказати файл.");
                     return;
                 }
-
                 input = Path.of(args[++i]);
 
             } else if (args[i].equals("--output")) {
                 if (i + 1 >= args.length) {
                     System.err.println(
-                            "Помилка: після --output потрібно вказати файл."
-                    );
+                            "Помилка: після --output потрібно вказати файл.");
                     return;
                 }
-
                 output = Path.of(args[++i]);
+
+            } else if (args[i].equals("--csv")) {
+                if (i + 1 >= args.length) {
+                    System.err.println(
+                            "Помилка: після --csv потрібно вказати файл.");
+                    return;
+                }
+                csvOutput = Path.of(args[++i]);
             }
         }
 
@@ -110,27 +113,89 @@ public class Main {
             );
 
             List<String> errors = new ArrayList<>();
-            List<Movie> movies = CatalogService.parse(lines, errors);
+            List<Movie> parsedMovies = CatalogService.parse(lines, errors);
+
+            Repository<Movie> movieRepository = new Repository<>();
+
+            for (Movie movie : parsedMovies) {
+                movieRepository.add(movie);
+            }
+
+            List<Movie> movies = movieRepository.all();
+
             String report = CatalogService.buildReport(
                     CatalogService.summarize(movies),
                     errors
             );
 
             if (showScores) {
-                report = report + CatalogService.buildScoreSection(movies);
+                report += CatalogService.buildScoreSection(movies);
             }
 
             if (showQueries) {
-                report = report + CatalogService.buildQueriesSection(movies);
+                report += CatalogService.buildQueriesSection(movies);
             }
 
             if (findTitle != null) {
-                report = report + CatalogService.buildSearchLine(movies, findTitle);
+                report += CatalogService.buildSearchLine(movies, findTitle);
             }
+
+            Repository<MovieRecord> recordRepository = new Repository<>();
+
+            for (Movie movie : movies) {
+                recordRepository.add(new MovieRecord(
+                        movie.getTitle(),
+                        movie.getDirector(),
+                        movie.getYear(),
+                        movie.getMinutes(),
+                        movie.getRating()
+                ));
+            }
+
+            List<MovieRecord> originalRecords = recordRepository.all();
+
+            CsvExporter.write(
+                    csvOutput,
+                    MovieRecord.class,
+                    originalRecords
+            );
+
+            String csvContent = Files.readString(
+                    csvOutput,
+                    StandardCharsets.UTF_8
+            );
+
+            List<List<String>> rows =
+                    CsvParser.parseDocument(csvContent);
+
+            Repository<MovieRecord> restoredRepository =
+                    new Repository<>();
+
+            for (int i = 1; i < rows.size(); i++) {
+                restoredRepository.add(
+                        MovieRecord.fromCsv(rows.get(i))
+                );
+            }
+
+            List<MovieRecord> restoredRecords =
+                    restoredRepository.all();
+
+            boolean roundTripSuccessful =
+                    originalRecords.equals(restoredRecords);
+
+            String newLine = System.lineSeparator();
+
+            report += newLine + "Результати CSV-зберігання:" + newLine
+                    + "Кількість записів: " + originalRecords.size() + newLine
+                    + "CSV-рядків разом із заголовком: " + rows.size() + newLine
+                    + "Відновлено записів: " + restoredRecords.size() + newLine
+                    + "Round-trip: "
+                    + (roundTripSuccessful ? "успішно" : "помилка") + newLine
+                    + "CSV-файл: " + csvOutput + newLine;
 
             System.out.println(report);
 
-            Path outputParent = output.getParent();
+            Path outputParent = output.toAbsolutePath().getParent();
 
             if (outputParent != null) {
                 Files.createDirectories(outputParent);
@@ -142,15 +207,25 @@ public class Main {
                     StandardCharsets.UTF_8
             );
 
-            System.out.println(
-                    "Звіт записано у: " + output
-            );
+            System.out.println("Звіт записано у: " + output);
+            System.out.println("CSV-файл записано у: " + csvOutput);
 
-        } catch (IOException e) {
-            System.err.println(
-                    "Помилка роботи з файлами: "
-                            + e.getMessage()
-            );
+            if (!roundTripSuccessful) {
+                System.err.println(
+                        "Помилка: початкові та відновлені записи не збігаються."
+                );
+            }
+
+        } catch (IOException | DataStorageException exception) {
+            System.err.println("Помилка роботи зі сховищем або файлами: "
+                    + exception.getClass().getSimpleName()
+                    + ": " + exception.getMessage());
+
+            Throwable cause = exception.getCause();
+
+            if (cause != null) {
+                System.err.println("Причина: " + cause);
+            }
         }
     }
 }
